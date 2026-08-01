@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +5,7 @@ import '../models/member.dart';
 import '../providers/member_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/member_card.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -17,7 +16,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
-  Member? _result;
+  List<Member> _results = <Member>[];
   bool _isSearching = false;
   bool _searched = false;
 
@@ -35,10 +34,10 @@ class _SearchScreenState extends State<SearchScreen> {
       _isSearching = true;
       _searched = true;
     });
-    final result = await context.read<MemberProvider>().searchByName(query);
+    final results = await context.read<MemberProvider>().searchMembers(query);
     if (!mounted) return;
     setState(() {
-      _result = result;
+      _results = results;
       _isSearching = false;
     });
   }
@@ -62,7 +61,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
-                            _result = null;
+                            _results = <Member>[];
                             _searched = false;
                           });
                         },
@@ -86,7 +85,19 @@ class _SearchScreenState extends State<SearchScreen> {
                     : const Text('BUSCAR'),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            if (_searched && _results.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_results.length} ${_results.length == 1 ? 'resultado' : 'resultados'}',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
             Expanded(child: _buildResults()),
           ],
         ),
@@ -99,8 +110,11 @@ class _SearchScreenState extends State<SearchScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_result != null) {
-      return _buildResultCard();
+    if (_results.isNotEmpty) {
+      return ListView.builder(
+        itemCount: _results.length,
+        itemBuilder: (_, i) => MemberCard(member: _results[i]),
+      );
     }
 
     if (_searched) {
@@ -115,57 +129,6 @@ class _SearchScreenState extends State<SearchScreen> {
       icon: Icons.search_off_outlined,
       title: 'Busca un miembro',
       subtitle: 'Ingresa el nombre y presiona buscar',
-    );
-  }
-
-  Widget _buildResultCard() {
-    final m = _result!;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: AppTheme.accentPale,
-              backgroundImage: m.fotoPath != null ? FileImage(File(m.fotoPath!)) : null,
-              child: m.fotoPath == null
-                  ? const Icon(Icons.person_outline, size: 36, color: AppTheme.textSecondary)
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${m.nombre} ${m.apellidos}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            if (m.telefono != null)
-              _infoRow(Icons.phone_outlined, m.telefono!),
-            if (m.email != null)
-              _infoRow(Icons.email_outlined, m.email!),
-            const SizedBox(height: 4),
-            _infoRow(
-              Icons.calendar_today_outlined,
-              'Registrado: ${m.fechaRegistro.day}/${m.fechaRegistro.month}/${m.fechaRegistro.year}',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 16, color: AppTheme.textSecondary),
-          const SizedBox(width: 8),
-          Text(text, style: const TextStyle(color: AppTheme.textSecondary)),
-        ],
-      ),
     );
   }
 }

@@ -7,14 +7,12 @@ class MemberProvider extends ChangeNotifier {
   final MemberRepository _repository;
 
   List<Member> _members = <Member>[];
-  Member? _selectedMember;
   bool _isLoading = false;
   String? _error;
 
   MemberProvider(this._repository);
 
   List<Member> get members => List.unmodifiable(_members);
-  Member? get selectedMember => _selectedMember;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -49,16 +47,15 @@ class MemberProvider extends ChangeNotifier {
     }
   }
 
-  Future<Member?> searchByName(String nombre) async {
+  Future<List<Member>> searchMembers(String query) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      _selectedMember = await _repository.getMemberByName(nombre);
-      return _selectedMember;
+      return await _repository.searchMembers(query);
     } catch (e) {
       _error = e.toString();
-      return null;
+      return <Member>[];
     } finally {
       _isLoading = false;
       notifyListeners();

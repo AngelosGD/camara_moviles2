@@ -11,15 +11,14 @@ class MockMemberRepository implements MemberRepository {
   }
 
   @override
-  Future<Member?> getMemberByName(String nombre) async {
-    final query = nombre.trim().toLowerCase();
-    for (final member in _members) {
-      if (member.nombre.toLowerCase().contains(query) ||
-          member.apellidos.toLowerCase().contains(query)) {
-        return member;
-      }
-    }
-    return null;
+  Future<List<Member>> searchMembers(String query) async {
+    final q = query.trim().toLowerCase();
+    return _members.where((member) {
+      final fullName = '${member.nombre} ${member.apellidos}'.toLowerCase();
+      return member.nombre.toLowerCase().contains(q) ||
+          member.apellidos.toLowerCase().contains(q) ||
+          fullName.contains(q);
+    }).toList();
   }
 
   @override

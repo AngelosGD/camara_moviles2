@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../models/member.dart';
 import '../providers/member_provider.dart';
+import '../services/camera_service.dart';
 import '../widgets/photo_picker_widget.dart';
 import 'camera_screen.dart';
 
@@ -37,6 +39,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
     if (path != null && mounted) {
       setState(() => _fotoPath = path);
+    }
+  }
+
+  Future<void> _onPickFromGallery() async {
+    final photo = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (photo == null || !mounted) return;
+    try {
+      final path = await CameraService.savePhoto(photo);
+      if (!mounted) return;
+      setState(() => _fotoPath = path);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo cargar la imagen')),
+      );
     }
   }
 
@@ -91,6 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               PhotoPickerWidget(
                 imagePath: _fotoPath,
                 onTakePhoto: _onTakePhoto,
+                onPickFromGallery: _onPickFromGallery,
               ),
               const SizedBox(height: 32),
               TextFormField(

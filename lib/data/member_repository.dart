@@ -3,7 +3,7 @@ import 'database_helper.dart';
 
 abstract class MemberRepository {
   Future<int> insertMember(Member member);
-  Future<Member?> getMemberByName(String nombre);
+  Future<List<Member>> searchMembers(String query);
   Future<List<Member>> getAllMembers();
   Future<int> updateMember(Member member);
   Future<int> deleteMember(int id);
@@ -19,8 +19,7 @@ class SQLiteMemberRepository implements MemberRepository {
   Future<int> insertMember(Member member) => _helper.insertMember(member);
 
   @override
-  Future<Member?> getMemberByName(String nombre) =>
-      _helper.getMemberByName(nombre);
+  Future<List<Member>> searchMembers(String query) => _helper.searchMembers(query);
 
   @override
   Future<List<Member>> getAllMembers() => _helper.getAllMembers();

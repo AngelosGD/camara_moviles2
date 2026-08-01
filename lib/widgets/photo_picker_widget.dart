@@ -6,11 +6,13 @@ import '../theme/app_theme.dart';
 class PhotoPickerWidget extends StatelessWidget {
   final String? imagePath;
   final VoidCallback onTakePhoto;
+  final VoidCallback onPickFromGallery;
 
   const PhotoPickerWidget({
     super.key,
     this.imagePath,
     required this.onTakePhoto,
+    required this.onPickFromGallery,
   });
 
   @override
@@ -26,10 +28,21 @@ class PhotoPickerWidget extends StatelessWidget {
               : null,
         ),
         const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: onTakePhoto,
-          icon: const Icon(Icons.camera_alt_outlined, size: 20),
-          label: const Text('Tomar Foto'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              onPressed: onTakePhoto,
+              icon: const Icon(Icons.camera_alt_outlined, size: 20),
+              label: const Text('Tomar Foto'),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: onPickFromGallery,
+              icon: const Icon(Icons.photo_library_outlined, size: 20),
+              label: const Text('Galería'),
+            ),
+          ],
         ),
       ],
     );

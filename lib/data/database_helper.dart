@@ -46,17 +46,15 @@ class DatabaseHelper {
     return db.insert(_table, map);
   }
 
-  Future<Member?> getMemberByName(String nombre) async {
+  Future<List<Member>> searchMembers(String query) async {
     final db = await database;
     final maps = await db.query(
       _table,
-      where: 'nombre LIKE ? OR apellidos LIKE ?',
-      whereArgs: ['%$nombre%', '%$nombre%'],
+      where: 'nombre LIKE ? OR apellidos LIKE ? OR (nombre || \' \' || apellidos) LIKE ?',
+      whereArgs: ['%$query%', '%$query%', '%$query%'],
       orderBy: 'nombre ASC',
-      limit: 1,
     );
-    if (maps.isEmpty) return null;
-    return Member.fromMap(maps.first);
+    return maps.map(Member.fromMap).toList();
   }
 
   Future<List<Member>> getAllMembers() async {
