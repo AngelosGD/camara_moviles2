@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'app.dart';
+import 'data/member_repository.dart';
 
 void main() {
-  runApp(const App());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(App(repository: SQLiteMemberRepository()));
 }

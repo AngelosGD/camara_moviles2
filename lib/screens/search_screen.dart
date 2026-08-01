@@ -1,7 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../models/member.dart';
+import '../providers/member_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 
@@ -15,6 +18,8 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
   Member? _result;
+  bool _isSearching = false;
+  bool _searched = false;
 
   @override
   void dispose() {
@@ -22,9 +27,20 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  void _onSearch() {
+  Future<void> _onSearch() async {
     final query = _searchController.text.trim();
-    if (query.isEmpty) return;
+    if (query.isEmpty || _isSearching) return;
+
+    setState(() {
+      _isSearching = true;
+      _searched = true;
+    });
+    final result = await context.read<MemberProvider>().searchByName(query);
+    if (!mounted) return;
+    setState(() {
+      _result = result;
+      _isSearching = false;
+    });
   }
 
   @override
@@ -45,7 +61,10 @@ class _SearchScreenState extends State<SearchScreen> {
                         icon: const Icon(Icons.close),
                         onPressed: () {
                           _searchController.clear();
-                          setState(() => _result = null);
+                          setState(() {
+                            _result = null;
+                            _searched = false;
+                          });
                         },
                       )
                     : null,
@@ -57,24 +76,45 @@ class _SearchScreenState extends State<SearchScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _onSearch,
-                child: const Text('BUSCAR'),
+                onPressed: _isSearching ? null : _onSearch,
+                child: _isSearching
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('BUSCAR'),
               ),
             ),
             const SizedBox(height: 32),
-            if (_result != null)
-              _buildResultCard()
-            else
-              const Expanded(
-                child: EmptyState(
-                  icon: Icons.search_off_outlined,
-                  title: 'Busca un miembro',
-                  subtitle: 'Ingresa el nombre y presiona buscar',
-                ),
-              ),
+            Expanded(child: _buildResults()),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildResults() {
+    if (_isSearching) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_result != null) {
+      return _buildResultCard();
+    }
+
+    if (_searched) {
+      return const EmptyState(
+        icon: Icons.person_off_outlined,
+        title: 'No se encontró miembro',
+        subtitle: 'Verifica el nombre e inténtalo de nuevo',
+      );
+    }
+
+    return const EmptyState(
+      icon: Icons.search_off_outlined,
+      title: 'Busca un miembro',
+      subtitle: 'Ingresa el nombre y presiona buscar',
     );
   }
 
@@ -84,6 +124,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
               radius: 40,

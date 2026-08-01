@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../models/member.dart';
+import '../providers/member_provider.dart';
 import '../widgets/photo_picker_widget.dart';
+import 'camera_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -15,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _telefonoController = TextEditingController();
   final _emailController = TextEditingController();
   String? _fotoPath;
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -25,15 +31,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _onTakePhoto() {}
+  Future<void> _onTakePhoto() async {
+    final path = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const CameraScreen()),
+    );
+    if (path != null && mounted) {
+      setState(() => _fotoPath = path);
+    }
+  }
 
-  void _onSave() {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _onSave() async {
+    if (_isSaving || !_formKey.currentState!.validate()) return;
+
+    final member = Member(
+      nombre: _nombreController.text.trim(),
+      apellidos: _apellidosController.text.trim(),
+      telefono: _telefonoController.text.trim().isEmpty
+          ? null
+          : _telefonoController.text.trim(),
+      email: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
+      fotoPath: _fotoPath,
+    );
+
+    setState(() => _isSaving = true);
+    try {
+      await context.read<MemberProvider>().registerMember(member);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Miembro registrado correctamente')),
       );
       _formKey.currentState!.reset();
+      _nombreController.clear();
+      _apellidosController.clear();
+      _telefonoController.clear();
+      _emailController.clear();
       setState(() => _fotoPath = null);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al registrar el miembro')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -79,8 +120,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _onSave,
-                  child: const Text('GUARDAR MIEMBRO'),
+                  onPressed: _isSaving ? null : _onSave,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('GUARDAR MIEMBRO'),
                 ),
               ),
             ],
