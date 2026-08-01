@@ -12,6 +12,7 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? _controller;
+  List<CameraDescription> _cameras = <CameraDescription>[];
   bool _isInitializing = true;
   bool _isTakingPhoto = false;
   String? _error;
@@ -26,16 +27,17 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _error = 'No se encontró una cámara disponible';
-          _isInitializing = false;
-        });
+        _showError('No se encontró una cámara disponible');
         return;
       }
+      _cameras = cameras;
+      final initial = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
 
       final controller = CameraController(
-        cameras.first,
+        initial,
         ResolutionPreset.medium,
         enableAudio: false,
       );
@@ -48,12 +50,39 @@ class _CameraScreenState extends State<CameraScreen> {
         _controller = controller;
         _isInitializing = false;
       });
-    } catch (e) {
+    } catch (_) {
+      _showError('Error al inicializar la cámara');
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    setState(() {
+      _error = message;
+      _isInitializing = false;
+    });
+  }
+
+  Future<void> _switchCamera() async {
+    final controller = _controller;
+    if (controller == null || _isInitializing || _cameras.length < 2) return;
+
+    final next = _cameras.firstWhere(
+      (c) => c.lensDirection != controller.description.lensDirection,
+      orElse: () => controller.description,
+    );
+    if (identical(next, controller.description)) return;
+
+    setState(() => _isInitializing = true);
+    try {
+      await controller.setDescription(next);
+    } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _error = 'Error al inicializar la cámara';
-        _isInitializing = false;
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo cambiar de cámara')),
+      );
+    } finally {
+      if (mounted) setState(() => _isInitializing = false);
     }
   }
 
@@ -131,41 +160,62 @@ class _CameraScreenState extends State<CameraScreen> {
       );
     }
 
-    return ClipRect(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: MediaQuery.sizeOf(context).width,
-          height: MediaQuery.sizeOf(context).height,
-          child: CameraPreview(_controller!),
-        ),
-      ),
+    return _buildPreview();
+  }
+
+  Widget _buildPreview() {
+    final controller = _controller!;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = 1 /
+            (controller.value.aspectRatio *
+                constraints.maxWidth /
+                constraints.maxHeight);
+        return ClipRect(
+          child: Transform.scale(
+            scale: scale,
+            alignment: Alignment.center,
+            child: CameraPreview(controller),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildShutterBar() {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: GestureDetector(
-            onTap: _takePicture,
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(color: Colors.black38, width: 4),
-              ),
-              child: _isTakingPhoto
-                  ? const Padding(
-                      padding: EdgeInsets.all(22),
-                      child: CircularProgressIndicator(strokeWidth: 3),
-                    )
-                  : null,
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              tooltip: 'Cambiar de cámara',
+              iconSize: 32,
+              color: Colors.white,
+              onPressed: _cameras.length > 1 ? _switchCamera : null,
+              icon: const Icon(Icons.cameraswitch),
             ),
-          ),
+            GestureDetector(
+              onTap: _takePicture,
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black38, width: 4),
+                ),
+                child: _isTakingPhoto
+                    ? const Padding(
+                        padding: EdgeInsets.all(22),
+                        child: CircularProgressIndicator(strokeWidth: 3),
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 48),
+          ],
         ),
       ),
     );
