@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'register_screen.dart';
+import 'member_form_screen.dart';
 import 'search_screen.dart';
 import 'report_screen.dart';
 
@@ -14,7 +14,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
-    RegisterScreen(),
+    MemberFormScreen(),
     SearchScreen(),
     ReportScreen(),
   ];

@@ -47,6 +47,23 @@ class MemberProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateMember(Member member) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _repository.updateMember(member);
+      await loadMembers();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<List<Member>> searchMembers(String query) async {
     _isLoading = true;
     _error = null;

@@ -8,21 +8,38 @@ import '../services/camera_service.dart';
 import '../widgets/photo_picker_widget.dart';
 import 'camera_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+class MemberFormScreen extends StatefulWidget {
+  final Member? member;
+
+  const MemberFormScreen({super.key, this.member});
+
+  bool get isEditing => member != null;
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<MemberFormScreen> createState() => _MemberFormScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _MemberFormScreenState extends State<MemberFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nombreController = TextEditingController();
-  final _apellidosController = TextEditingController();
+  late final TextEditingController _nombreController;
+  late final TextEditingController _apellidosController;
   final _telefonoController = TextEditingController();
   final _emailController = TextEditingController();
   String? _fotoPath;
   bool _isSaving = false;
+
+  bool get _isEditing => widget.isEditing;
+
+  @override
+  void initState() {
+    super.initState();
+    final m = widget.member;
+    _nombreController = TextEditingController(text: m?.nombre ?? '');
+    _apellidosController = TextEditingController(text: m?.apellidos ?? '');
+    _telefonoController.text = m?.telefono ?? '';
+    _emailController.text = m?.email ?? '';
+    _fotoPath = m?.fotoPath;
+  }
 
   @override
   void dispose() {
@@ -60,6 +77,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _onSave() async {
     if (_isSaving || !_formKey.currentState!.validate()) return;
 
+    final provider = context.read<MemberProvider>();
+
+    if (_isEditing) {
+      final updated = Member(
+        id: widget.member!.id,
+        nombre: _nombreController.text.trim(),
+        apellidos: _apellidosController.text.trim(),
+        telefono: _telefonoController.text.trim().isEmpty
+            ? null
+            : _telefonoController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+        fotoPath: _fotoPath,
+        fechaRegistro: widget.member!.fechaRegistro,
+      );
+      try {
+        setState(() => _isSaving = true);
+        await provider.updateMember(updated);
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Miembro actualizado correctamente')),
+        );
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al actualizar el miembro')),
+        );
+      } finally {
+        if (mounted) setState(() => _isSaving = false);
+      }
+      return;
+    }
+
     final member = Member(
       nombre: _nombreController.text.trim(),
       apellidos: _apellidosController.text.trim(),
@@ -74,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isSaving = true);
     try {
-      await context.read<MemberProvider>().registerMember(member);
+      await provider.registerMember(member);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Miembro registrado correctamente')),
@@ -98,7 +150,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar Miembro')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Editar Miembro' : 'Registrar Miembro'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         child: Form(
@@ -145,7 +199,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('GUARDAR MIEMBRO'),
+                      : Text(_isEditing
+                          ? 'ACTUALIZAR MIEMBRO'
+                          : 'GUARDAR MIEMBRO'),
                 ),
               ),
             ],

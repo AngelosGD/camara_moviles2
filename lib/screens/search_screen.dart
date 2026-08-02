@@ -6,6 +6,7 @@ import '../providers/member_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/member_card.dart';
+import 'member_form_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -113,7 +114,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_results.isNotEmpty) {
       return ListView.builder(
         itemCount: _results.length,
-        itemBuilder: (_, i) => MemberCard(member: _results[i]),
+        itemBuilder: (_, i) => _MemberCardActions(member: _results[i]),
       );
     }
 
@@ -129,6 +130,53 @@ class _SearchScreenState extends State<SearchScreen> {
       icon: Icons.search_off_outlined,
       title: 'Busca un miembro',
       subtitle: 'Ingresa el nombre y presiona buscar',
+    );
+  }
+}
+
+class _MemberCardActions extends StatelessWidget {
+  final Member member;
+
+  const _MemberCardActions({required this.member});
+
+  Future<void> _openEdit(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => MemberFormScreen(member: member)),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar miembro'),
+        content: Text(
+          '¿Seguro que deseas eliminar a ${member.nombre} ${member.apellidos}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    ).then((confirmed) async {
+      if (confirmed == true && context.mounted) {
+        await context.read<MemberProvider>().deleteMember(member.id!);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MemberCard(
+      member: member,
+      onEdit: () => _openEdit(context),
+      onDelete: () => _confirmDelete(context),
     );
   }
 }

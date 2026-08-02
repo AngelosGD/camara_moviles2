@@ -7,8 +7,16 @@ import '../theme/app_theme.dart';
 class MemberCard extends StatelessWidget {
   final Member member;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const MemberCard({super.key, required this.member, this.onTap});
+  const MemberCard({
+    super.key,
+    required this.member,
+    this.onTap,
+    this.onEdit,
+    this.onDelete,
+  });
 
   String get _fullName => '${member.nombre} ${member.apellidos}';
 
@@ -41,7 +49,23 @@ class MemberCard extends StatelessWidget {
           'Registrado: $_formattedDate',
           style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
         ),
-        trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onEdit != null)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                color: AppTheme.textSecondary,
+                onPressed: onEdit,
+              ),
+            if (onDelete != null)
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                color: AppTheme.textSecondary,
+                onPressed: onDelete,
+              ),
+          ],
+        ),
       ),
     );
   }
